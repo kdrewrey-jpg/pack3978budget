@@ -673,7 +673,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 //  SUPABASE CONFIGURATION
 // ============================================================
 const SUPABASE_URL  = 'https://bqaorqfxjedcvgppiqma.supabase.co';
-const SUPABASE_KEY  = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE';
+const SUPABASE_KEY  = 'sb_publishable_9ckrYwB88aji6Dkwdv_VTw_Zq77Bcr9';
 const TABLE_NAME    = 'pack_data';
 const ROW_ID        = 1; // We use a single row to store all data
 
@@ -1210,6 +1210,15 @@ function checkPin(){
     setTimeout(()=>{pinEntry='';updatePinDots();document.getElementById('pin-error').textContent='';},1000);
   }
 }
+// Keyboard support — number keys, numpad, backspace, escape
+document.addEventListener('keydown',function(e){
+  const ps=document.getElementById('pin-screen');
+  if(!ps||ps.style.display==='none'||ps.classList.contains('hidden')) return;
+  if(e.key>='0'&&e.key<='9'){pinPress(e.key);}
+  else if(e.key==='Backspace'){pinBackspace();}
+  else if(e.key==='Escape'){pinClear();}
+  else if(e.key==='Enter'&&pinEntry.length===6){checkPin();}
+});
 
 // ============================================================
 //  INIT
