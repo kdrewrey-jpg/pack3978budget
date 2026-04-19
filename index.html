@@ -237,6 +237,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 .mini-stat-val{font-size:14px;font-weight:700;margin-top:1px;}
 .dues-alert{background:var(--red-light);border:1px solid #F5C6C6;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--red);display:flex;align-items:center;gap:6px;margin-top:8px;}
 .event-alert{background:var(--gold-light);border:1px solid #F5D77A;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:#7A5C00;display:flex;align-items:center;gap:6px;margin-top:6px;}
+.dues-due-alert{background:linear-gradient(135deg,#7A0000,#BE0000);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px;margin-top:8px;}
 /* TABS */
 .tabs{display:flex;gap:4px;background:#ECEAE3;padding:4px;border-radius:10px;width:fit-content;margin-bottom:18px;}
 .tab{padding:6px 18px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);transition:all .15s;}
@@ -565,9 +566,16 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
     <div class="page" id="page-families">
       <div class="page-header">
         <div><div class="page-title">Family Accounts</div><div class="page-subtitle">Scout fund balances, credits, and charges</div></div>
-        <button class="btn btn-navy" onclick="openAddFamily()">+ Add Scout</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost btn-sm" onclick="openDuesSettings()">⚙ Dues Settings</button>
+          <button class="btn btn-navy" onclick="openAddFamily()">+ Add Scout</button>
+        </div>
       </div>
       <div class="stat-grid" id="family-stats"></div>
+      <div class="card" id="dues-settings-banner" style="margin-bottom:20px;display:none">
+        <div class="card-header"><span class="card-title">📅 Annual Dues</span><button class="btn btn-ghost btn-sm" onclick="openDuesSettings()">Edit Settings</button></div>
+        <div class="card-body" id="dues-settings-banner-body" style="padding:14px 22px"></div>
+      </div>
       <div class="card">
         <div class="card-header">
           <div style="display:flex;align-items:center;gap:12px"><span class="card-title">Scout Roster</span><div class="tabs" id="den-tabs" style="margin:0"></div></div>
@@ -796,13 +804,44 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
         </div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light)">
           <span style="color:var(--text-muted)">Organization</span>
-          <span style="font-weight:700">Scouting America</span>
+          <span style="font-weight:700">Pack 3978 Budget Tracker</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:6px 0">
           <span style="color:var(--text-muted)">Database</span>
           <span style="font-weight:700">Supabase</span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dues Settings Modal -->
+<div class="modal-overlay" id="modal-dues-settings">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span class="modal-title">⚙ Annual Dues Settings</span><button class="modal-close" onclick="closeModal('modal-dues-settings')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">Set the annual dues amount and due date. A warning badge will automatically appear on every scout card on or after the due date if dues have not been recorded on their account for this year.</div>
+      <div class="form-grid g2">
+        <div class="form-group">
+          <label>Annual Dues Amount ($)</label>
+          <input type="number" id="dues-amount-input" value="50" min="0" step="0.01" placeholder="50.00">
+        </div>
+        <div class="form-group">
+          <label>Fiscal Year</label>
+          <input type="number" id="dues-year-input" value="2025" min="2020" max="2099">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Dues Due Date</label>
+          <input type="date" id="dues-date-input">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Warning badges appear on all scout cards on or after this date.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-dues-settings')">Cancel</button>
+      <button class="btn btn-navy btn-sm" onclick="saveDuesSettings()">Save Settings</button>
     </div>
   </div>
 </div>
@@ -834,7 +873,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ============================================================
 //  STATE
 // ============================================================
-let S = {packName:'CS Pack 3978',families:[],transactions:[],events:[],budget:[],nextId:1};
+let S = {packName:'CS Pack 3978',families:[],transactions:[],events:[],budget:[],nextId:1,duesSettings:{amount:50,dueDate:'',year:new Date().getFullYear()}};
 let saveTimer=null,lastSaved=null,activeFamilyId=null,editingFamilyId=null,_confirmResolve=null;
 let pendingReportType=null;
 
@@ -1050,6 +1089,61 @@ function renderDashboard(){
 }
 
 // ============================================================
+//  DUES SETTINGS
+// ============================================================
+function openDuesSettings(){
+  const d=S.duesSettings||{};
+  document.getElementById('dues-amount-input').value=d.amount||50;
+  document.getElementById('dues-year-input').value=d.year||new Date().getFullYear();
+  document.getElementById('dues-date-input').value=d.dueDate||'';
+  openModal('modal-dues-settings');
+}
+function saveDuesSettings(){
+  S.duesSettings={
+    amount:parseFloat(document.getElementById('dues-amount-input').value)||50,
+    year:parseInt(document.getElementById('dues-year-input').value)||new Date().getFullYear(),
+    dueDate:document.getElementById('dues-date-input').value||''
+  };
+  save();closeModal('modal-dues-settings');renderFamilies();
+  toast('Dues settings saved.');
+}
+function duesAreDue(){
+  const d=S.duesSettings;
+  if(!d||!d.dueDate)return false;
+  return today()>=d.dueDate;
+}
+function scoutHasPaidDues(f){
+  const d=S.duesSettings;
+  if(!d||!d.year)return true;
+  // Check if scout has a dues charge in their ledger for the dues year
+  return (f.ledger||[]).some(e=>
+    e.kind==='debit'&&
+    e.chargeType==='Dues'&&
+    e.date&&e.date.startsWith(String(d.year))
+  );
+}
+function renderDuesBanner(){
+  const d=S.duesSettings;
+  const banner=document.getElementById('dues-settings-banner');
+  const body=document.getElementById('dues-settings-banner-body');
+  if(!d||!d.dueDate){banner.style.display='none';return;}
+  banner.style.display='';
+  const isDue=duesAreDue();
+  const unpaidCount=S.families.filter(f=>!scoutHasPaidDues(f)).length;
+  body.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Amount</span><div style="font-size:18px;font-weight:700;color:var(--navy)">${fmt(d.amount||50)}</div></div>
+        <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Due Date</span><div style="font-size:18px;font-weight:700;color:var(--navy)">${d.dueDate}</div></div>
+        <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Year</span><div style="font-size:18px;font-weight:700;color:var(--navy)">${d.year}</div></div>
+        <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Unpaid Scouts</span><div style="font-size:18px;font-weight:700;color:${unpaidCount>0&&isDue?'var(--red)':'var(--green)'}">${unpaidCount}</div></div>
+      </div>
+      <span class="badge ${isDue?'badge-red':'badge-navy'}">${isDue?'⚠ Dues Are Due':'⏳ Not Due Yet — Due '+d.dueDate}</span>
+    </div>
+  `;
+}
+
+// ============================================================
 //  FAMILY ACCOUNTS
 // ============================================================
 function openAddFamily(){
@@ -1097,6 +1191,7 @@ async function submitFamily(){
   }
 }
 function renderFamilies(){
+  renderDuesBanner();
   const search=document.getElementById('family-search').value.toLowerCase();
   const dens=['all',...new Set(S.families.map(f=>f.den))];
   document.getElementById('den-tabs').innerHTML=dens.map(d=>`<button class="tab ${d===denFilterMode?'active':''}" onclick="denFilterMode='${d}';renderFamilies()">${d==='all'?'All':d.split(' ')[0]}</button>`).join('');
@@ -1134,6 +1229,7 @@ function renderFamilies(){
         <div class="mini-stat"><div class="mini-stat-label">Total Charged</div><div class="mini-stat-val" style="color:var(--red)">${fmt(getTotalCharged(f))}</div></div>
       </div>
       ${bal<0?`<div class="dues-alert">⚠ Balance due — ${fmt(Math.abs(bal))} owed</div>`:''}
+      ${duesAreDue()&&!scoutHasPaidDues(f)?`<div class="dues-due-alert">💰 ${S.duesSettings.year} Dues of ${fmt(S.duesSettings.amount||50)} not yet recorded</div>`:''}
       ${nearEvent?`<div class="event-alert">📅 ${nearEvent.name} coming up — balance is negative</div>`:''}
       ${lastTxns.length?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-light)">${lastTxns.map(t=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text-muted)">${t.date} · ${t.chargeType||t.creditType||'Entry'}</span><span style="font-weight:700;color:${t.kind==='credit'?'var(--green)':'var(--red)'}">${t.kind==='credit'?'+':'-'}${fmt(t.amount)}</span></div>`).join('')}</div>`:''}
     </div>`;
@@ -1319,7 +1415,7 @@ function pdfHeader(packName, reportTitle){
         <div style="font-family:'Fjalla One',sans-serif;font-size:16px;color:#1A5276;margin-top:2px">${reportTitle}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;color:#5C6472">Scouting America</div>
+        <div style="font-size:12px;color:#5C6472">Pack 3978 Budget Tracker</div>
         <div style="font-size:12px;color:#5C6472;margin-top:2px">Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
       </div>
     </div>`;
