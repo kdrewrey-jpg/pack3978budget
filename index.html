@@ -250,6 +250,153 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:20px;}
+
+/* HAMBURGER MENU */
+.hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;flex-shrink:0;}
+.hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .25s ease;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:48;backdrop-filter:blur(2px);}
+.sidebar-overlay.open{display:block;}
+
+/* MOBILE — 768px and below */
+@media(max-width:768px){
+  /* TOPBAR */
+  .topbar{padding:0 14px;gap:8px;height:56px;}
+  .topbar-sub{display:none;}
+  .topbar-brand{font-size:17px;}
+  .topbar-fleur{width:28px;height:28px;}
+  .global-search-wrap{width:100%;max-width:180px;}
+  .topbar-pack-name{display:none;}
+  .db-status{padding:4px 8px;font-size:11px;}
+  #db-status-text{display:none;}
+  .hamburger{display:flex;}
+
+  /* SIDEBAR — slides in from top as dropdown */
+  .sidebar{
+    position:fixed;
+    top:56px;
+    left:0;
+    right:0;
+    width:100%;
+    height:auto;
+    max-height:0;
+    overflow:hidden;
+    z-index:49;
+    padding:0;
+    transition:max-height .3s ease, padding .3s ease;
+    border-bottom:none;
+  }
+  .sidebar.mobile-open{
+    max-height:500px;
+    padding:12px 0 16px;
+    border-bottom:3px solid var(--gold);
+    box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  .sidebar-footer{display:none;}
+
+  /* NAV ITEMS — horizontal scroll or vertical list */
+  .nav-item{padding:11px 24px;font-size:15px;}
+
+  /* SHELL */
+  .shell{flex-direction:column;}
+
+  /* MAIN */
+  .main{padding:16px 14px;min-width:0;}
+
+  /* STAT GRID — 2x2 */
+  .stat-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-value{font-size:22px;}
+
+  /* PAGE HEADER */
+  .page-header{flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .page-title{font-size:22px;}
+  .page-header>div:last-child{flex-wrap:wrap;gap:8px;}
+
+  /* CARDS */
+  .card-header{flex-wrap:wrap;gap:8px;padding:12px 14px;}
+  .card-body{padding:14px;}
+
+  /* FAMILY GRID — single column */
+  .family-grid{grid-template-columns:1fr;}
+
+  /* TABLES — horizontal scroll */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{font-size:13px;min-width:500px;}
+  thead th{padding:7px 10px;font-size:10px;}
+  tbody td{padding:8px 10px;}
+
+  /* TABS */
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:100%;}
+
+  /* MODALS */
+  .modal{max-width:calc(100vw - 24px);margin:12px;}
+  .modal-wide{max-width:calc(100vw - 24px);}
+  .modal-body{padding:14px 14px 0;}
+  .modal-footer{padding:12px 14px 14px;}
+
+  /* FORMS */
+  .form-grid.g2{grid-template-columns:1fr;}
+  .form-grid.g3{grid-template-columns:1fr;}
+
+  /* BUDGET */
+  .budget-year-progress{padding:14px;}
+  .budget-line{grid-template-columns:1fr 1fr;gap:6px;}
+  .budget-totals{grid-template-columns:1fr 1fr;gap:6px;}
+  #budget-lines .budget-line input,#budget-lines .budget-line select{font-size:13px;}
+
+  /* DASHBOARD GRID */
+  #page-dashboard .dash-grid,
+  div[style*="grid-template-columns:1fr 1fr"]{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:14px!important;
+  }
+
+  /* REPORT CARDS */
+  .report-card{flex-direction:column;align-items:flex-start;gap:12px;}
+  .report-card .btn{width:100%;justify-content:center;}
+
+  /* BUTTONS */
+  .btn{font-size:13px;padding:7px 14px;}
+  .btn-sm{font-size:12px;padding:5px 10px;}
+
+  /* DETAIL MODAL GRIDS */
+  #detail-body div[style*="grid-template-columns:1fr 1fr 1fr"]{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  #detail-body div[style*="grid-template-columns:1fr 1fr"]{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  #detail-body div[style*="display:grid"]{
+    grid-template-columns:1fr!important;
+  }
+  #detail-body div[style*="grid-template-columns:90px"]{
+    display:none!important;
+  }
+
+  /* PIN SCREEN */
+  .pin-box{min-width:unset;width:100%;max-width:320px;padding:24px 20px;}
+  .pin-btn{padding:14px;}
+  .pin-btn{font-size:20px;}
+
+  /* TOAST */
+  #toast-wrap{bottom:14px;right:14px;left:14px;}
+  .toast-item{max-width:100%;}
+}
+
+/* SMALL PHONES — 380px and below */
+@media(max-width:380px){
+  .topbar-brand{font-size:15px;}
+  .global-search-wrap{max-width:130px;}
+  .stat-value{font-size:20px;}
+  .stat-label{font-size:10px;}
+  .stat-hint{display:none;}
+  .page-title{font-size:20px;}
+}
 </style>
 </head>
 <body>
@@ -291,6 +438,9 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 </div>
 
 <header class="topbar">
+  <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
   <svg class="topbar-fleur" viewBox="0 0 34 34" fill="none">
     <path d="M17 2C17 2 14 8 14 12C14 14.5 15.5 16.5 17 17C18.5 16.5 20 14.5 20 12C20 8 17 2 17 2Z" fill="#FFC72C"/>
     <path d="M17 32C17 32 14 26 14 22C14 19.5 15.5 17.5 17 17C18.5 17.5 20 19.5 20 22C20 26 17 32 17 32Z" fill="#FFC72C"/>
@@ -314,18 +464,19 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
   </div>
 </header>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileMenu()"></div>
 <div class="shell">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-section-label">Overview</div>
-    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">🏠</span> Dashboard</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this);closeMobileMenu()"><span class="nav-icon">🏠</span> Dashboard</div>
     <div class="sidebar-section-label">Accounts</div>
-    <div class="nav-item" onclick="showPage('families',this)"><span class="nav-icon">👨‍👩‍👦</span> Family Accounts</div>
+    <div class="nav-item" onclick="showPage('families',this);closeMobileMenu()"><span class="nav-icon">👨‍👩‍👦</span> Family Accounts</div>
     <div class="sidebar-section-label">Finances</div>
-    <div class="nav-item" onclick="showPage('checking',this)"><span class="nav-icon">🏦</span> Checking Account</div>
-    <div class="nav-item" onclick="showPage('events',this)"><span class="nav-icon">🏕️</span> Events &amp; Costs</div>
+    <div class="nav-item" onclick="showPage('checking',this);closeMobileMenu()"><span class="nav-icon">🏦</span> Checking Account</div>
+    <div class="nav-item" onclick="showPage('events',this);closeMobileMenu()"><span class="nav-icon">🏕️</span> Events &amp; Costs</div>
     <div class="sidebar-section-label">Planning</div>
-    <div class="nav-item" onclick="showPage('budget',this)"><span class="nav-icon">📊</span> Budget Planner</div>
-    <div class="nav-item" onclick="showPage('reports',this)"><span class="nav-icon">📋</span> Reports</div>
+    <div class="nav-item" onclick="showPage('budget',this);closeMobileMenu()"><span class="nav-icon">📊</span> Budget Planner</div>
+    <div class="nav-item" onclick="showPage('reports',this);closeMobileMenu()"><span class="nav-icon">📋</span> Reports</div>
     <div class="sidebar-footer">
       <div class="sidebar-footer-text">CS Pack 3978 Budget Manager<br>Powered by Supabase</div>
     </div>
@@ -581,7 +732,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
       <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light)">
           <span style="color:var(--text-muted)">Version</span>
-          <span style="font-weight:700;color:var(--navy)">1.0</span>
+          <span style="font-weight:700;color:var(--navy)">1.1</span>
         </div>
         <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light)">
           <span style="color:var(--text-muted)">Release Date</span>
@@ -630,6 +781,30 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 let S = {packName:'CS Pack 3978',families:[],transactions:[],events:[],budget:[],nextId:1};
 let saveTimer=null,lastSaved=null,activeFamilyId=null,editingFamilyId=null,_confirmResolve=null;
 let pendingReportType=null;
+
+// ============================================================
+//  MOBILE MENU
+// ============================================================
+function toggleMobileMenu(){
+  const sidebar=document.getElementById('sidebar');
+  const overlay=document.getElementById('sidebar-overlay');
+  const btn=document.getElementById('hamburger-btn');
+  const isOpen=sidebar.classList.contains('mobile-open');
+  if(isOpen){
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('open');
+    btn.classList.remove('open');
+  }else{
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+function closeMobileMenu(){
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.getElementById('hamburger-btn').classList.remove('open');
+}
 
 // ============================================================
 //  PIN
