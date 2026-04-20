@@ -297,6 +297,17 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 .loading-bar-fill{height:100%;background:var(--gold);border-radius:20px;animation:loadPulse 1.5s ease-in-out infinite;}
 @keyframes loadPulse{0%{width:0%}50%{width:70%}100%{width:100%}}
 .loading-msg{font-size:13px;color:rgba(255,255,255,.5);margin-top:14px;}
+/* TRANSACTION HISTORY IN DETAIL MODAL */
+.txn-history-header{display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:0 0 8px;border-bottom:2px solid var(--border);}
+.txn-history-row{display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-light);}
+.txn-history-cell{font-size:13px;}
+.txn-mobile-label{display:none;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:2px;}
+@media(max-width:768px){
+  .txn-history-header{display:none;}
+  .txn-history-row{display:flex;flex-direction:column;gap:4px;padding:12px 0;border-bottom:1px solid var(--border-light);}
+  .txn-history-cell{display:flex;flex-direction:column;}
+  .txn-mobile-label{display:block;}
+}
 /* PRINT */
 @media print{body>*{display:none!important;}#print-area{display:block!important;position:fixed;top:0;left:0;width:100%;}}
 #print-area{display:none;}
@@ -428,7 +439,18 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
     grid-template-columns:1fr!important;
   }
   #detail-body div[style*="grid-template-columns:90px"]{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:0!important;
+  }
+  /* Hide the desktop column header row in transaction history */
+  #detail-body div[style*="grid-template-columns:90px"][style*="text-transform:uppercase"]{
     display:none!important;
+  }
+  /* Make each transaction entry a stacked card on mobile */
+  #detail-body div[style*="grid-template-columns:90px"] > span,
+  #detail-body div[style*="grid-template-columns:90px"] > div{
+    display:block;
   }
 
   /* PIN SCREEN */
@@ -1289,8 +1311,35 @@ function openFamilyDetail(id){
     <div class="divider"></div>
     <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:12px">Transaction History</div>
     ${ledger.length?`
-      <div style="display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:0 0 8px;border-bottom:2px solid var(--border)"><span>Date</span><span>Type</span><span>Method</span><span>Description</span><span style="text-align:right">Amount</span><span></span></div>
-      ${ledger.map(e=>`<div style="display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-light);font-size:13px;background:${e.kind==='credit'?'rgba(26,107,56,.03)':'rgba(190,0,0,.03)'}"><span style="color:var(--text-muted)">${e.date}</span><span><span class="badge ${e.kind==='credit'?'badge-green':'badge-red'}">${e.kind==='credit'?e.creditType:e.chargeType}</span></span><span style="font-size:12px;color:var(--text-muted)">${e.method||'—'}</span><span style="color:var(--text-muted)">${e.description||e.notes||'—'}</span><span style="text-align:right;font-weight:700;color:${e.kind==='credit'?'var(--green)':'var(--red)'}">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span><button class="btn btn-xs btn-danger-xs" onclick="deleteLedgerEntry(${f.id},${e.id})">✕</button></div>`).join('')}
+      <div class="txn-history-header">
+        <span>Date</span><span>Type</span><span>Method</span><span>Description</span><span style="text-align:right">Amount</span><span></span>
+      </div>
+      ${ledger.map(e=>`
+        <div class="txn-history-row" style="background:${e.kind==='credit'?'rgba(26,107,56,.03)':'rgba(190,0,0,.03)'}">
+          <div class="txn-history-cell">
+            <span class="txn-mobile-label">Date</span>
+            <span style="color:var(--text-muted);font-size:13px">${e.date}</span>
+          </div>
+          <div class="txn-history-cell">
+            <span class="txn-mobile-label">Type</span>
+            <span class="badge ${e.kind==='credit'?'badge-green':'badge-red'}">${e.kind==='credit'?e.creditType:e.chargeType}</span>
+          </div>
+          <div class="txn-history-cell">
+            <span class="txn-mobile-label">Method</span>
+            <span style="font-size:12px;color:var(--text-muted)">${e.method||'—'}</span>
+          </div>
+          <div class="txn-history-cell">
+            <span class="txn-mobile-label">Description</span>
+            <span style="color:var(--text-muted);font-size:13px">${e.description||e.notes||'—'}</span>
+          </div>
+          <div class="txn-history-cell" style="text-align:right">
+            <span class="txn-mobile-label">Amount</span>
+            <span style="font-weight:700;color:${e.kind==='credit'?'var(--green)':'var(--red)'}">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span>
+          </div>
+          <div class="txn-history-cell" style="text-align:right">
+            <button class="btn btn-xs btn-danger-xs" onclick="deleteLedgerEntry(${f.id},${e.id})">✕</button>
+          </div>
+        </div>`).join('')}
     `:'<div class="empty-state" style="padding:24px 0"><div class="empty-state-text">No transactions yet for this scout.</div></div>'}
   `;
   openModal('modal-family-detail');
