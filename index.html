@@ -670,7 +670,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
       </div>
       <div class="form-grid g2">
         <div class="form-group"><label>Email</label><input type="email" id="f-email" placeholder="parent@email.com"></div>
-        <div class="form-group"><label>Phone</label><input type="tel" id="f-phone" placeholder="(555) 555-5555"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="f-phone" placeholder="(555) 555-5555" oninput="onPhoneInput(this)" onblur="onPhoneInput(this)"></div>
       </div>
       <div class="form-grid"><div class="form-group"><label>Notes</label><textarea class="note-field" id="f-notes" placeholder="Any notes…"></textarea></div></div>
     </div>
@@ -1017,6 +1017,14 @@ function getTotalCharged(f){return (f.ledger||[]).filter(e=>e.kind==='debit').re
 function getTotalCredited(f){return (f.openingBalance||0)+(f.ledger||[]).filter(e=>e.kind==='credit').reduce((s,e)=>s+e.amount,0);}
 function addCheckingEntry(date,desc,type,cat,amt){S.transactions.push({id:uid(),date,desc,type,cat,amt,notes:''});}
 function copyToClipboard(text,label){navigator.clipboard.writeText(text).then(()=>toast(`${label} copied!`));}
+function formatPhone(val){
+  const digits=val.replace(/\D/g,'').slice(0,10);
+  if(digits.length===0)return '';
+  if(digits.length<=3)return '('+digits;
+  if(digits.length<=6)return '('+digits.slice(0,3)+') '+digits.slice(3);
+  return '('+digits.slice(0,3)+') '+digits.slice(3,6)+'-'+digits.slice(6);
+}
+function onPhoneInput(el){el.value=formatPhone(el.value);}
 function getUpcomingEvents(days=30){const now=new Date();const limit=new Date(now.getTime()+days*86400000);return S.events.filter(e=>{const d=new Date(e.date);return d>=now&&d<=limit;}).sort((a,b)=>a.date.localeCompare(b.date));}
 
 // ============================================================
@@ -1162,7 +1170,7 @@ function openEditFamily(id){
   document.getElementById('family-modal-submit').textContent='Save Changes';
   document.getElementById('f-opening-group').style.display='none';
   document.getElementById('f-scout').value=f.scout||'';document.getElementById('f-parent').value=f.parent||'';
-  document.getElementById('f-email').value=f.email||'';document.getElementById('f-phone').value=f.phone||'';
+  document.getElementById('f-email').value=f.email||'';document.getElementById('f-phone').value=formatPhone(f.phone||'');
   document.getElementById('f-notes').value=f.notes||'';document.getElementById('f-dues').value=f.annualDues||50;
   document.getElementById('f-den').value=f.den||'Lion (K)';
   closeModal('modal-family-detail');openModal('modal-add-family');
@@ -1172,12 +1180,12 @@ async function submitFamily(){
   if(editingFamilyId){
     const f=S.families.find(x=>x.id===editingFamilyId);if(!f)return;
     f.scout=scout;f.parent=document.getElementById('f-parent').value.trim();f.den=document.getElementById('f-den').value;
-    f.email=document.getElementById('f-email').value.trim();f.phone=document.getElementById('f-phone').value.trim();
+    f.email=document.getElementById('f-email').value.trim();f.phone=formatPhone(document.getElementById('f-phone').value.trim());
     f.notes=document.getElementById('f-notes').value.trim();f.annualDues=parseFloat(document.getElementById('f-dues').value)||0;
     closeModal('modal-add-family');save();renderFamilies();toast(`${scout}'s account updated.`);editingFamilyId=null;
   }else{
     const dues=parseFloat(document.getElementById('f-dues').value)||0;const opening=parseFloat(document.getElementById('f-opening').value)||0;
-    const newFamily={id:uid(),scout,parent:document.getElementById('f-parent').value.trim(),den:document.getElementById('f-den').value,email:document.getElementById('f-email').value.trim(),phone:document.getElementById('f-phone').value.trim(),annualDues:dues,openingBalance:opening,notes:document.getElementById('f-notes').value.trim(),ledger:[]};
+    const newFamily={id:uid(),scout,parent:document.getElementById('f-parent').value.trim(),den:document.getElementById('f-den').value,email:document.getElementById('f-email').value.trim(),phone:formatPhone(document.getElementById('f-phone').value.trim()),annualDues:dues,openingBalance:opening,notes:document.getElementById('f-notes').value.trim(),ledger:[]};
     S.families.push(newFamily);closeModal('modal-add-family');
     if(dues>0){
       const yes=await showConfirm('Charge Annual Dues Now?',`Add a dues charge of ${fmt(dues)} to ${scout}'s account?`,'💰','Yes, charge dues','btn-red');
