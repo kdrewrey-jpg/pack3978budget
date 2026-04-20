@@ -63,7 +63,7 @@ body.dark .badge-gray{background:#252839;color:var(--text-muted);}
 body.dark .badge-navy{background:#0D1A33;color:#7EB3FF;}
 body.dark .report-card{background:var(--surface);}
 body.dark .report-card:hover{background:#1F2235;}
-body.dark #loading-screen{background:#060810;}
+body.dark .pin-box{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08);}
 body.dark .budget-year-progress{background:var(--surface);}
 body.dark .stat-card{background:var(--surface);}
 /* DARK MODE TOGGLE BUTTON */
@@ -269,15 +269,6 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 .report-card-icon{font-size:28px;width:48px;height:48px;background:var(--bg);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .report-card-title{font-family:'Fjalla One',sans-serif;font-size:15px;color:var(--navy);}
 .report-card-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
-/* LOADING SCREEN */
-#loading-screen{position:fixed;inset:0;background:var(--navy-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .4s ease;}
-#loading-screen.hidden{opacity:0;pointer-events:none;}
-.loading-logo{font-family:'Fjalla One',sans-serif;font-size:32px;color:#fff;letter-spacing:.04em;margin-bottom:8px;}
-.loading-sub{font-size:14px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:32px;}
-.loading-bar-track{width:240px;height:4px;background:rgba(255,255,255,.15);border-radius:20px;overflow:hidden;}
-.loading-bar-fill{height:100%;background:var(--gold);border-radius:20px;animation:loadPulse 1.5s ease-in-out infinite;}
-@keyframes loadPulse{0%{width:0%}50%{width:70%}100%{width:100%}}
-.loading-msg{font-size:13px;color:rgba(255,255,255,.5);margin-top:14px;}
 /* TRANSACTION HISTORY IN DETAIL MODAL */
 .txn-history-header{display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:0 0 8px;border-bottom:2px solid var(--border);}
 .txn-history-row{display:grid;grid-template-columns:90px 110px 100px 1fr 90px 36px;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-light);}
@@ -498,14 +489,6 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 <body>
 
 
-<!-- LOADING SCREEN -->
-<div id="loading-screen" style="display:flex">
-  <div class="loading-logo">CS Pack 3978</div>
-  <div class="loading-sub">Budget Manager</div>
-  <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
-  <div class="loading-msg" id="loading-msg">Connecting to database…</div>
-</div>
-
 <header class="topbar">
   <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
     <span></span><span></span><span></span>
@@ -531,7 +514,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
     <span class="dark-toggle-icon">🌙</span>
     <span class="dark-toggle-label">Dark</span>
   </button>
-  <div class="db-status" id="db-status">
+  <div class="db-status" id="db-status" onclick="loadFromDB()" title="Click to retry connection" style="cursor:pointer">
     <div class="db-dot connecting" id="db-dot"></div>
     <span id="db-status-text">Connecting…</span>
   </div>
@@ -972,14 +955,30 @@ function doUndo(id){if(_undoCallbacks[id]){_undoCallbacks[id]();delete _undoCall
 // ============================================================
 function setDbStatus(s,t){document.getElementById('db-status-text').textContent=t;document.getElementById('db-dot').className='db-dot '+s;}
 async function loadFromDB(){
-  setDbStatus('connecting','Loading…');
+  setDbStatus('connecting','Connecting…');
+  // Timeout fallback — if DB takes more than 8 seconds, open app anyway with local data
+  const timeout=setTimeout(()=>{
+    setDbStatus('error','DB Timeout');
+    toast('Could not reach database — showing local data. Changes will sync when reconnected.');
+    renderDashboard();
+  },8000);
   try{
     const {data,error}=await db.from(TABLE_NAME).select('data').eq('id',ROW_ID).single();
-    if(error&&error.code==='PGRST116'){await saveToDB();setDbStatus('connected','Connected');hideLoadingScreen();return;}
+    clearTimeout(timeout);
+    if(error&&error.code==='PGRST116'){
+      // First time — no row yet, save initial state
+      await saveToDB();setDbStatus('connected','Connected');renderDashboard();return;
+    }
     if(error)throw error;
     if(data&&data.data){S={...S,...data.data};document.getElementById('pack-label').textContent='✎ '+S.packName;}
-    lastSaved=new Date();setDbStatus('connected','Connected');hideLoadingScreen();renderDashboard();
-  }catch(e){setDbStatus('error','DB Error');document.getElementById('loading-msg').textContent='Connection failed — check your key and try refreshing.';}
+    lastSaved=new Date();setDbStatus('connected','Connected');renderDashboard();
+  }catch(e){
+    clearTimeout(timeout);
+    console.error('DB load error:',e);
+    setDbStatus('error','DB Error');
+    toast('Database error — showing local data. Tap the status indicator to retry.');
+    renderDashboard();
+  }
 }
 async function saveToDB(){
   setDbStatus('saving','Saving…');
@@ -991,7 +990,6 @@ async function saveToDB(){
 }
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>saveToDB(),1500);}
 function save(){scheduleSave();}
-function hideLoadingScreen(){setTimeout(()=>{const ls=document.getElementById('loading-screen');ls.classList.add('hidden');setTimeout(()=>ls.style.display='none',400);},500);}
 
 // ============================================================
 //  UTILITIES
@@ -1688,6 +1686,9 @@ document.getElementById('t-date').value=today();
 document.getElementById('ev-date').value=today();
 document.getElementById('budget-year').value=new Date().getFullYear();
 initDarkMode();
+// Render dashboard immediately with whatever data exists locally
+renderDashboard();
+// Then connect to database in the background
 loadFromDB();
 </script>
 </body>
