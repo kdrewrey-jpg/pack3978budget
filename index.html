@@ -309,7 +309,12 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
   .txn-mobile-label{display:block;}
 }
 /* PRINT */
-@media print{body>*{display:none!important;}#print-area{display:block!important;position:fixed;top:0;left:0;width:100%;}}
+@media print{
+  @page{margin:12mm 14mm;size:auto;}
+  body>*{display:none!important;}
+  #print-area{display:block!important;position:absolute;top:0;left:0;width:100%;margin:0;padding:0;}
+  #print-area *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+}
 #print-area{display:none;}
 ::-webkit-scrollbar{width:6px;height:6px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -1311,35 +1316,22 @@ function openFamilyDetail(id){
     <div class="divider"></div>
     <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:12px">Transaction History</div>
     ${ledger.length?`
-      <div class="txn-history-header">
-        <span>Date</span><span>Type</span><span>Method</span><span>Description</span><span style="text-align:right">Amount</span><span></span>
+      <div style="display:grid;grid-template-columns:90px 1fr 90px 36px;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);padding:0 0 8px;border-bottom:2px solid var(--border)">
+        <span>Date</span><span>Type</span><span style="text-align:right">Amount</span><span></span>
       </div>
-      ${ledger.map(e=>`
-        <div class="txn-history-row" style="background:${e.kind==='credit'?'rgba(26,107,56,.03)':'rgba(190,0,0,.03)'}">
-          <div class="txn-history-cell">
-            <span class="txn-mobile-label">Date</span>
-            <span style="color:var(--text-muted);font-size:13px">${e.date}</span>
-          </div>
-          <div class="txn-history-cell">
-            <span class="txn-mobile-label">Type</span>
-            <span class="badge ${e.kind==='credit'?'badge-green':'badge-red'}">${e.kind==='credit'?e.creditType:e.chargeType}</span>
-          </div>
-          <div class="txn-history-cell">
-            <span class="txn-mobile-label">Method</span>
-            <span style="font-size:12px;color:var(--text-muted)">${e.method||'—'}</span>
-          </div>
-          <div class="txn-history-cell">
-            <span class="txn-mobile-label">Description</span>
-            <span style="color:var(--text-muted);font-size:13px">${e.description||e.notes||'—'}</span>
-          </div>
-          <div class="txn-history-cell" style="text-align:right">
-            <span class="txn-mobile-label">Amount</span>
-            <span style="font-weight:700;color:${e.kind==='credit'?'var(--green)':'var(--red)'}">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span>
-          </div>
-          <div class="txn-history-cell" style="text-align:right">
-            <button class="btn btn-xs btn-danger-xs" onclick="deleteLedgerEntry(${f.id},${e.id})">✕</button>
-          </div>
-        </div>`).join('')}
+      ${ledger.map(e=>{
+        const d=new Date(e.date+'T00:00:00');
+        const mm=String(d.getMonth()+1).padStart(2,'0');
+        const dd=String(d.getDate()).padStart(2,'0');
+        const yy=String(d.getFullYear()).slice(2);
+        const shortDate=`${mm}-${dd}-${yy}`;
+        return `<div style="display:grid;grid-template-columns:90px 1fr 90px 36px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);background:${e.kind==='credit'?'rgba(26,107,56,.03)':'rgba(190,0,0,.03)'}">
+          <span style="color:var(--text-muted);font-size:13px">${shortDate}</span>
+          <span><span class="badge ${e.kind==='credit'?'badge-green':'badge-red'}">${e.kind==='credit'?e.creditType:e.chargeType}</span></span>
+          <span style="text-align:right;font-weight:700;color:${e.kind==='credit'?'var(--green)':'var(--red)'}">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span>
+          <button class="btn btn-xs btn-danger-xs" onclick="deleteLedgerEntry(${f.id},${e.id})">✕</button>
+        </div>`;
+      }).join('')}
     `:'<div class="empty-state" style="padding:24px 0"><div class="empty-state-text">No transactions yet for this scout.</div></div>'}
   `;
   openModal('modal-family-detail');
@@ -1465,7 +1457,7 @@ function renderBudgetTotals(){const year=parseInt(document.getElementById('budge
 //  PDF REPORT HELPERS
 // ============================================================
 function pdfHeader(packName, reportTitle){
-  return `<div style="font-family:'Source Sans 3',sans-serif;max-width:720px;margin:0 auto;padding:24px;">
+  return `<div style="font-family:'Source Sans 3',sans-serif;width:100%;padding:0 4px;">
     <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #003F87;padding-bottom:14px;margin-bottom:20px">
       <div>
         <div style="font-family:'Fjalla One',sans-serif;font-size:22px;color:#003F87">${packName}</div>
