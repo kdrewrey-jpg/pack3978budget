@@ -183,7 +183,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 .badge-green{background:var(--green-light);color:var(--green);}
 .badge-red{background:var(--red-light);color:var(--red);}
 .badge-gold{background:var(--gold-light);color:#8B6914;}
-.badge-gray{background:#F1F1F1;color:#555;}
+.badge-gray{background:#F1F1F1;color:#8C95A3;}
 .badge-den{background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;}
 /* PROGRESS */
 .progress-track{background:#E8E4DC;border-radius:20px;height:10px;overflow:hidden;}
@@ -314,6 +314,44 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
   body>*{display:none!important;}
   #print-area{display:block!important;position:absolute;top:0;left:0;width:100%;margin:0;padding:0;}
   #print-area *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  /* Strip all background colors — outlines only */
+  #print-area [style*="background:#"],
+  #print-area [style*="background: #"]{background:#fff!important;}
+  /* Restore table row alternating as very light gray — just enough to separate rows */
+  #print-area tbody tr:nth-child(even) td{background:#F7F7F7!important;}
+  /* Table header — outline instead of solid navy fill */
+  #print-area thead tr{background:#fff!important;}
+  #print-area thead th{
+    background:#fff!important;
+    color:#002255!important;
+    border-bottom:2px solid #002255!important;
+    font-weight:700!important;
+  }
+  /* Table footer row */
+  #print-area tfoot tr{background:#fff!important;}
+  #print-area tfoot td{border-top:2px solid #002255!important;}
+  /* Stat/summary boxes — border only, no fill */
+  #print-area [style*="border-radius:8px"],
+  #print-area [style*="border-radius: 8px"]{
+    background:#fff!important;
+    border:1px solid #999!important;
+  }
+  /* Dues unpaid notice — keep red outline but no fill */
+  #print-area [style*="border:2px solid #8B0000"]{
+    background:#fff!important;
+    border:2px solid #7A0000!important;
+  }
+  /* Force all text dark enough to read on white paper */
+  #print-area{color:#1C1C1E!important;}
+  #print-area [style*="color:#5C6472"]{color:#333!important;}
+  #print-area [style*="color:#8C95A3"]{color:#444!important;}
+  #print-area [style*="color:#8B92A8"]{color:#444!important;}
+  #print-area [style*="color:#1A6B38"]{color:#0A4020!important;}
+  #print-area [style*="color:#BE0000"]{color:#7A0000!important;}
+  #print-area [style*="color:#003F87"]{color:#002255!important;}
+  #print-area [style*="color:#1A5276"]{color:#002255!important;}
+  #print-area [style*="color:#C8960C"]{color:#7A5C00!important;}
+  #print-area [style*="color:#FFC72C"]{color:#7A5C00!important;}
 }
 #print-area{display:none;}
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -1338,16 +1376,52 @@ function openFamilyDetail(id){
 }
 function printStatement(id){
   const f=S.families.find(x=>x.id===id);if(!f)return;
-  const bal=getScoutBalance(f);const ledger=[...(f.ledger||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  const bal=getScoutBalance(f);
+  const ledger=[...(f.ledger||[])].sort((a,b)=>a.date.localeCompare(b.date));
+  const duesOwed=duesAreDue()&&!scoutHasPaidDues(f);
+  const duesNotice=duesOwed?`
+    <div style="background:#FFF0F0;border:2px solid #8B0000;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⚠</span>
+      <div>
+        <div style="font-weight:700;color:#BE0000;font-size:14px">Annual Dues Unpaid</div>
+        <div style="font-size:13px;color:#5C6472;margin-top:2px">${S.duesSettings.year} dues of ${fmt(S.duesSettings.amount||50)} have not been recorded on this account.</div>
+      </div>
+    </div>`:'';
   document.getElementById('print-area').innerHTML=pdfHeader(S.packName,'Account Statement — '+f.scout)+`
+    ${duesNotice}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
-      <div style="background:#F0EDE4;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Fund Balance</div><div style="font-size:22px;font-weight:700;color:${bal>=0?'#1A6B38':'#BE0000'}">${fmt(bal)}</div></div>
-      <div style="background:#E9F5EE;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1A6B38">Total Credited</div><div style="font-size:22px;font-weight:700;color:#1A6B38">${fmt(getTotalCredited(f))}</div></div>
-      <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#BE0000">Total Charged</div><div style="font-size:22px;font-weight:700;color:#BE0000">${fmt(getTotalCharged(f))}</div></div>
+      <div style="background:#E8E8E8;border-radius:8px;padding:12px;border:1px solid #CCC">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472;font-weight:700">Fund Balance</div>
+        <div style="font-size:22px;font-weight:700;color:${bal>=0?'#145230':'#8B0000'}">${fmt(bal)}</div>
+      </div>
+      <div style="background:#E8F0EB;border-radius:8px;padding:12px;border:1px solid #B0CCB8">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1A6B38;font-weight:700">Total Credited</div>
+        <div style="font-size:22px;font-weight:700;color:#1A6B38">${fmt(getTotalCredited(f))}</div>
+      </div>
+      <div style="background:#F5E8E8;border-radius:8px;padding:12px;border:1px solid #CCB0B0">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#BE0000;font-weight:700">Total Charged</div>
+        <div style="font-size:22px;font-weight:700;color:#BE0000">${fmt(getTotalCharged(f))}</div>
+      </div>
     </div>
-    <div style="margin-bottom:16px;font-size:13px"><span style="color:#5C6472">Scout:</span> <strong>${f.scout}</strong> &nbsp;|&nbsp; <span style="color:#5C6472">Den:</span> <strong>${f.den}</strong> &nbsp;|&nbsp; <span style="color:#5C6472">Parent:</span> <strong>${f.parent||'—'}</strong></div>
-    ${pdfTable(['Date','Type','Description','Method','Amount'],ledger.map(e=>[e.date,e.kind==='credit'?e.creditType:e.chargeType,e.description||e.notes||'—',e.method||'—',`<span style="color:${e.kind==='credit'?'#1A6B38':'#BE0000'};font-weight:700">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span>`]))}
-    <div style="margin-top:12px;text-align:right;font-weight:700;font-size:14px">Current Balance: <span style="color:${bal>=0?'#1A6B38':'#BE0000'}">${fmt(bal)}</span></div>
+    <div style="margin-bottom:16px;font-size:13px;color:#1C1C1E">
+      <span style="color:#5C6472">Scout:</span> <strong>${f.scout}</strong> &nbsp;|&nbsp;
+      <span style="color:#5C6472">Den:</span> <strong>${f.den}</strong> &nbsp;|&nbsp;
+      <span style="color:#5C6472">Parent:</span> <strong>${f.parent||'—'}</strong> &nbsp;|&nbsp;
+      <span style="color:#5C6472">Annual Dues:</span> <strong>${fmt(f.annualDues||S.duesSettings?.amount||50)}</strong>
+    </div>
+    ${pdfTable(
+      ['Date','Type','Description','Method','Amount'],
+      ledger.map(e=>[
+        e.date,
+        e.kind==='credit'?e.creditType:e.chargeType,
+        e.description||e.notes||'—',
+        e.method||'—',
+        `<span style="color:${e.kind==='credit'?'#145230':'#8B0000'};font-weight:700">${e.kind==='credit'?'+':'-'}${fmt(e.amount)}</span>`
+      ])
+    )}
+    <div style="margin-top:12px;text-align:right;font-weight:700;font-size:14px;color:#1C1C1E">
+      Current Balance: <span style="color:${bal>=0?'#145230':'#8B0000'}">${fmt(bal)}</span>
+    </div>
   `+pdfFooter(S.packName);
   closeModal('modal-family-detail');setTimeout(()=>window.print(),100);
 }
@@ -1457,29 +1531,29 @@ function renderBudgetTotals(){const year=parseInt(document.getElementById('budge
 //  PDF REPORT HELPERS
 // ============================================================
 function pdfHeader(packName, reportTitle){
-  return `<div style="font-family:'Source Sans 3',sans-serif;width:100%;padding:0 4px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #003F87;padding-bottom:14px;margin-bottom:20px">
+  return `<div style="font-family:Arial,sans-serif;width:100%;padding:0 4px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #002855;padding-bottom:14px;margin-bottom:20px">
       <div>
-        <div style="font-family:'Fjalla One',sans-serif;font-size:22px;color:#003F87">${packName}</div>
-        <div style="font-family:'Fjalla One',sans-serif;font-size:16px;color:#1A5276;margin-top:2px">${reportTitle}</div>
+        <div style="font-size:22px;font-weight:900;color:#1A5276;letter-spacing:.02em">${packName}</div>
+        <div style="font-size:16px;font-weight:700;color:#1A5276;margin-top:2px">${reportTitle}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:12px;color:#5C6472">Pack 3978 Budget Tracker</div>
-        <div style="font-size:12px;color:#5C6472;margin-top:2px">Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
+        <div style="font-size:12px;color:#333">Pack 3978 Budget Tracker</div>
+        <div style="font-size:12px;color:#333;margin-top:2px">Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}</div>
       </div>
     </div>`;
 }
 function pdfFooter(packName){
-  return `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #EAE5D9;font-size:11px;color:#8C95A3;text-align:center">${packName} Budget Manager · ${new Date().toLocaleString()}</div></div>`;
+  return `<div style="margin-top:24px;padding-top:12px;border-top:1px solid #CCC;font-size:11px;color:#5C6472;text-align:center">${packName} Budget Manager · ${new Date().toLocaleString()}</div></div>`;
 }
 function pdfTable(headers, rows, footerRow=null){
-  const ths=headers.map(h=>`<th style="padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.06em">${h}</th>`).join('');
-  const trs=rows.map((r,i)=>`<tr style="background:${i%2===0?'#fff':'#F9F8F5'}">${r.map(c=>`<td style="padding:7px 10px;border-bottom:1px solid #EAE5D9;font-size:13px">${c}</td>`).join('')}</tr>`).join('');
-  const foot=footerRow?`<tfoot><tr style="background:#F0EDE4">${footerRow.map(c=>`<td style="padding:8px 10px;font-weight:700;font-size:13px">${c}</td>`).join('')}</tr></tfoot>`:'';
-  return `<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#003F87;color:#fff">${ths}</tr></thead><tbody>${trs}</tbody>${foot}</table>`;
+  const ths=headers.map(h=>`<th style="padding:8px 10px;text-align:left;font-size:11px;letter-spacing:.06em;color:#fff">${h}</th>`).join('');
+  const trs=rows.map((r,i)=>`<tr style="background:${i%2===0?'#fff':'#F2F2F2'}">${r.map(c=>`<td style="padding:7px 10px;border-bottom:1px solid #DDD;font-size:13px;color:#1C1C1E">${c}</td>`).join('')}</tr>`).join('');
+  const foot=footerRow?`<tfoot><tr style="background:#E8E8E8">${footerRow.map(c=>`<td style="padding:8px 10px;font-weight:700;font-size:13px;color:#1C1C1E">${c}</td>`).join('')}</tr></tfoot>`:'';
+  return `<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#002855;color:#fff">${ths}</tr></thead><tbody>${trs}</tbody>${foot}</table>`;
 }
 function pdfSummaryRow(label, value, color='#1C1C1E'){
-  return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #EAE5D9;font-size:14px"><span style="color:#5C6472">${label}</span><span style="font-weight:700;color:${color}">${value}</span></div>`;
+  return `<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #DDD;font-size:14px"><span style="color:#5C6472">${label}</span><span style="font-weight:700;color:${color}">${value}</span></div>`;
 }
 
 // ============================================================
@@ -1590,7 +1664,7 @@ function generateReport(type,year){
       `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:20px">
         <div style="background:#E9F5EE;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1A6B38">Proj. Income</div><div style="font-size:18px;font-weight:700;color:#1A6B38">${fmt(pi)}</div></div>
         <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#BE0000">Proj. Expenses</div><div style="font-size:18px;font-weight:700;color:#BE0000">${fmt(pe)}</div></div>
-        <div style="background:#E8EEF7;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#003F87">Proj. Net</div><div style="font-size:18px;font-weight:700;color:${pi-pe>=0?'#1A6B38':'#BE0000'}">${fmt(pi-pe)}</div></div>
+        <div style="background:#E8EEF7;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1A5276">Proj. Net</div><div style="font-size:18px;font-weight:700;color:${pi-pe>=0?'#1A6B38':'#BE0000'}">${fmt(pi-pe)}</div></div>
         <div style="background:#F0EDE4;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Actual Net</div><div style="font-size:18px;font-weight:700;color:${ai-ae>=0?'#1A6B38':'#BE0000'}">${fmt(ai-ae)}</div></div>
       </div>`+
       (inc.length?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#1A6B38;margin-bottom:8px">Income</div>`+pdfTable(['Category','Description','Projected','Actual','Variance'],inc.map(b=>{const d=b.actual-b.projected;return [b.cat,b.desc||'—',fmt(b.projected),fmt(b.actual),d===0?'—':`<span style="color:${d<0?'#1A6B38':'#BE0000'}">${d>0?'+':''}${fmt(d)}</span>`];})):'')+
@@ -1618,7 +1692,7 @@ function generateReport(type,year){
     const allDeps=S.transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amt,0);const allWds=S.transactions.filter(t=>t.type==='withdrawal').reduce((s,t)=>s+t.amt,0);
     area.innerHTML=pdfHeader(S.packName,`Full Financial Report — ${year}`)+
       // Financial snapshot
-      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#003F87;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Financial Snapshot</div>
+      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Financial Snapshot</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
         <div style="background:#E8EEF7;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Checking Balance</div><div style="font-size:16px;font-weight:700;color:${allDeps-allWds>=0?'#1A6B38':'#BE0000'}">${fmt(allDeps-allWds)}</div></div>
         <div style="background:#E9F5EE;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Total Scout Funds</div><div style="font-size:16px;font-weight:700;color:#1A6B38">${fmt(S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0))}</div></div>
@@ -1626,14 +1700,14 @@ function generateReport(type,year){
         <div style="background:#F0EDE4;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Budget Net (${year})</div><div style="font-size:16px;font-weight:700;color:${ai-ae>=0?'#1A6B38':'#BE0000'}">${fmt(ai-ae)}</div></div>
       </div>`+
       // Scout accounts
-      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#003F87;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Scout Fund Accounts</div>`+
+      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Scout Fund Accounts</div>`+
       pdfTable(['Scout','Den','Balance','Credited','Charged','Status'],
         [...S.families].sort((a,b)=>a.den.localeCompare(b.den)).map(f=>{const b=getScoutBalance(f);return [f.scout,f.den,`<span style="font-weight:700;color:${b>=0?'#1A6B38':'#BE0000'}">${fmt(b)}</span>`,fmt(getTotalCredited(f)),fmt(getTotalCharged(f)),b>=0?'✓ Good':'⚠ Due'];}))+
       // Checking summary
-      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#003F87;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em">Checking Account — ${year}</div>`+
+      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em">Checking Account — ${year}</div>`+
       (txns.length?pdfTable(['Date','Description','Category','Type','Amount'],txns.map(t=>[t.date,t.desc,t.cat,t.type==='deposit'?'Deposit':'Withdrawal',`<span style="color:${t.type==='deposit'?'#1A6B38':'#BE0000'}">${t.type==='deposit'?'+':'−'}${fmt(t.amt)}</span>`]),['','','',`Deposits: ${fmt(ydeps)} | Withdrawals: ${fmt(ywds)}`,`<strong style="color:${ydeps-ywds>=0?'#1A6B38':'#BE0000'}">Net: ${fmt(ydeps-ywds)}</strong>`]):'<div style="color:#5C6472;font-size:13px;padding:8px 0">No transactions for this year.</div>')+
       // Events
-      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#003F87;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em">Events & Costs</div>`+
+      `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em">Events & Costs</div>`+
       (S.events.length?pdfTable(['Event','Date','Type','Budgeted','Actual'],[...S.events].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[e.name,e.date,e.type,fmt(e.budgeted),fmt(e.actual)])):'<div style="color:#5C6472;font-size:13px;padding:8px 0">No events recorded.</div>')+
       pdfFooter(S.packName);
   }
