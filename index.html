@@ -1587,11 +1587,12 @@ function renderReports(){
   const unpaidLabel=duesAreDue()?'Scouts Needing Attention':'Scouts with Balance Due';
   // Summary card
   document.getElementById('report-summary-body').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+    <div style="display:flex;flex-direction:column">
       ${pdfSummaryRow('Pack Name',S.packName)}
-      ${pdfSummaryRow('Total Scouts',S.families.length)}
       ${pdfSummaryRow('Checking Balance',fmt(bal),bal>=0?'#1A6B38':'#BE0000')}
       ${pdfSummaryRow('Total Scout Funds',fmt(totalFunds),'#1A6B38')}
+      ${pdfSummaryRow('Unallocated Pack Funds',fmt(bal-totalFunds),(bal-totalFunds)>=0?'#1A6B38':'#BE0000')}
+      ${pdfSummaryRow('Total Scouts',S.families.length)}
       ${pdfSummaryRow(unpaidLabel,unpaid.length,unpaid.length>0?'#BE0000':'#1A6B38')}
       ${pdfSummaryRow('Total Amount Owed',fmt(totalOwed),totalOwed>0?'#BE0000':'#1A6B38')}
       ${pdfSummaryRow('Total Events',S.events.length)}
@@ -1644,7 +1645,7 @@ function generateReport(type,year){
     area.innerHTML=pdfHeader(S.packName,'Scout Fund Accounts')+
       pdfTable(
         ['Scout','Den','Fund Balance','Total Credited','Total Charged','Status'],
-        sorted.map(f=>{const b=getScoutBalance(f);return [f.scout,f.den,`<span style="font-weight:700;color:${b>=0?'#1A6B38':'#BE0000'}">${fmt(b)}</span>`,`<span style="color:#1A6B38">${fmt(getTotalCredited(f))}</span>`,`<span style="color:#BE0000">${fmt(getTotalCharged(f))}</span>`,b>=0?'<span style="color:#1A6B38;font-weight:700">✓ Good Standing</span>':'<span style="color:#BE0000;font-weight:700">⚠ Balance Due</span>'];})
+        sorted.map(f=>{const b=getScoutBalance(f);const duesUnpaid=duesAreDue()&&!scoutHasPaidDues(f);const isGood=b>=0&&!duesUnpaid;return [f.scout,f.den,`<span style="font-weight:700;color:${b>=0?'#0A4020':'#7A0000'}">${fmt(b)}</span>`,`<span style="color:#0A4020">${fmt(getTotalCredited(f))}</span>`,`<span style="color:#7A0000">${fmt(getTotalCharged(f))}</span>`,isGood?'<span style="color:#0A4020;font-weight:700">✓ Good Standing</span>':'<span style="color:#7A0000;font-weight:700">⚠ Requires Attention</span>'];})
       )+
       `<div style="margin-top:14px;display:flex;gap:24px;font-size:13px">
         <span style="color:#5C6472">Total Scouts: <strong>${S.families.length}</strong></span>
@@ -1737,7 +1738,7 @@ function generateReport(type,year){
       // Scout accounts
       `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Scout Fund Accounts</div>`+
       pdfTable(['Scout','Den','Balance','Credited','Charged','Status'],
-        [...S.families].sort((a,b)=>a.den.localeCompare(b.den)).map(f=>{const b=getScoutBalance(f);return [f.scout,f.den,`<span style="font-weight:700;color:${b>=0?'#1A6B38':'#BE0000'}">${fmt(b)}</span>`,fmt(getTotalCredited(f)),fmt(getTotalCharged(f)),b>=0?'✓ Good':'⚠ Due'];}))+
+        [...S.families].sort((a,b)=>a.den.localeCompare(b.den)).map(f=>{const b=getScoutBalance(f);const duesUnpaid=duesAreDue()&&!scoutHasPaidDues(f);const isGood=b>=0&&!duesUnpaid;return [f.scout,f.den,`<span style="font-weight:700;color:${b>=0?'#0A4020':'#7A0000'}">${fmt(b)}</span>`,fmt(getTotalCredited(f)),fmt(getTotalCharged(f)),isGood?'✓ Good Standing':'⚠ Requires Attention'];})+
       // Checking summary
       `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin:20px 0 10px;text-transform:uppercase;letter-spacing:.05em">Checking Account — ${year}</div>`+
       (txns.length?pdfTable(['Date','Description','Category','Type','Amount'],txns.map(t=>[t.date,t.desc,t.cat,t.type==='deposit'?'Deposit':'Withdrawal',`<span style="color:${t.type==='deposit'?'#1A6B38':'#BE0000'}">${t.type==='deposit'?'+':'−'}${fmt(t.amt)}</span>`]),['','','',`Deposits: ${fmt(ydeps)} | Withdrawals: ${fmt(ywds)}`,`<strong style="color:${ydeps-ywds>=0?'#1A6B38':'#BE0000'}">Net: ${fmt(ydeps-ywds)}</strong>`]):'<div style="color:#5C6472;font-size:13px;padding:8px 0">No transactions for this year.</div>')+
