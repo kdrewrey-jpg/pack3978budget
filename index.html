@@ -372,8 +372,8 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
   /* TOPBAR */
   .topbar{padding:0 14px;gap:8px;height:56px;}
   .topbar-sub{display:none;}
-  .topbar-brand{font-size:17px;}
-  .topbar-fleur{width:28px;height:28px;}
+  .topbar-brand{font-size:14px;letter-spacing:.01em;}
+  .topbar-fleur{width:24px;height:24px;}
   .global-search-wrap{width:100%;max-width:180px;}
   .topbar-pack-name{display:none;}
   .db-status{padding:4px 8px;font-size:11px;}
@@ -508,7 +508,8 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 
 /* SMALL PHONES — 380px and below */
 @media(max-width:380px){
-  .topbar-brand{font-size:15px;}
+  .topbar-brand{font-size:13px;}
+  .topbar-fleur{display:none;}
   .global-search-wrap{max-width:130px;}
   .stat-value{font-size:20px;}
   .stat-label{font-size:10px;}
@@ -1138,17 +1139,25 @@ function renderDashboard(){
   const deps=S.transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amt,0);
   const wds=S.transactions.filter(t=>t.type==='withdrawal').reduce((s,t)=>s+t.amt,0);const bal=deps-wds;
   const totalFunds=S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0);
-  const unpaidCount=S.families.filter(f=>getScoutBalance(f)<0).length;
+  const negativeBalCount=S.families.filter(f=>getScoutBalance(f)<0).length;
+  const unpaidDuesCount=duesAreDue()?S.families.filter(f=>!scoutHasPaidDues(f)).length:0;
+  const unpaidCount=Math.max(negativeBalCount,unpaidDuesCount);
+  const unpaidHint=duesAreDue()&&unpaidDuesCount>0?`${unpaidDuesCount} unpaid dues`:`${negativeBalCount} negative balance${negativeBalCount!==1?'s':''}`;
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card blue"><div class="stat-label">Checking Balance</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div><div class="stat-hint">Pack checking account</div></div>
     <div class="stat-card green"><div class="stat-label">Total Scout Funds</div><div class="stat-value green">${fmt(totalFunds)}</div><div class="stat-hint">Positive balances</div></div>
-    <div class="stat-card red"><div class="stat-label">Scouts with Balance Due</div><div class="stat-value red">${unpaidCount}</div><div class="stat-hint">of ${S.families.length} total scouts</div></div>
+    <div class="stat-card red"><div class="stat-label">Scouts Needing Attention</div><div class="stat-value ${unpaidCount>0?'red':'green'}">${unpaidCount}</div><div class="stat-hint">${unpaidHint}</div></div>
     <div class="stat-card gold"><div class="stat-label">Upcoming Events</div><div class="stat-value gold">${getUpcomingEvents(30).length}</div><div class="stat-hint">Next 30 days</div></div>
   `;
-  const unpaid=S.families.filter(f=>getScoutBalance(f)<0);
+  const unpaid=S.families.filter(f=>getScoutBalance(f)<0||duesAreDue()&&!scoutHasPaidDues(f));
   document.getElementById('dash-unpaid').innerHTML=!unpaid.length
     ?'<div style="padding:14px 0;font-size:14px;color:var(--green);font-weight:600">✓ All scout accounts are in good standing!</div>'
-    :unpaid.slice(0,6).map(f=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)"><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(f.scout)}</div><span style="font-weight:700;font-size:13px">${f.scout}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;color:var(--red);font-weight:700">${fmt(getScoutBalance(f))}</span><button class="btn btn-xs btn-ghost" onclick="showPage('families',document.querySelectorAll('.nav-item')[2]);setTimeout(()=>openFamilyDetail(${f.id}),100)">View</button></div></div>`).join('')
+    :unpaid.slice(0,6).map(f=>{
+      const negBal=getScoutBalance(f)<0;
+      const dueUnpaid=duesAreDue()&&!scoutHasPaidDues(f);
+      const reason=negBal&&dueUnpaid?'Negative balance + dues unpaid':negBal?fmt(getScoutBalance(f)):dueUnpaid?'Dues not recorded':'';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)"><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(f.scout)}</div><span style="font-weight:700;font-size:13px">${f.scout}</span></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--red);font-weight:700">${reason}</span><button class="btn btn-xs btn-ghost" onclick="showPage('families',document.querySelectorAll('.nav-item')[2]);setTimeout(()=>openFamilyDetail(${f.id}),100)">View</button></div></div>`;
+    }).join('')
     +(unpaid.length>6?`<div style="padding:8px 0;font-size:12px;color:var(--text-muted)">…and ${unpaid.length-6} more</div>`:'');
   const evts=getUpcomingEvents(30);
   document.getElementById('dash-events').innerHTML=!evts.length
@@ -1270,12 +1279,15 @@ function renderFamilies(){
   document.getElementById('den-tabs').innerHTML=dens.map(d=>`<button class="tab ${d===denFilterMode?'active':''}" onclick="denFilterMode='${d}';renderFamilies()">${d==='all'?'All':d.split(' ')[0]}</button>`).join('');
   const totalFunds=S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0);
   const totalBalances=S.families.reduce((s,f)=>s+getScoutBalance(f),0);
-  const unpaidCount=S.families.filter(f=>getScoutBalance(f)<0).length;
+  const negativeBalCount=S.families.filter(f=>getScoutBalance(f)<0).length;
+  const unpaidDuesCount=duesAreDue()?S.families.filter(f=>!scoutHasPaidDues(f)).length:0;
+  const unpaidCount=Math.max(negativeBalCount,unpaidDuesCount);
   const totalOwed=S.families.reduce((s,f)=>s+Math.abs(Math.min(0,getScoutBalance(f))),0);
+  const unpaidHint=duesAreDue()&&unpaidDuesCount>0?`${unpaidDuesCount} with unpaid dues`:fmt(totalOwed)+' total owed';
   document.getElementById('family-stats').innerHTML=`
     <div class="stat-card blue"><div class="stat-label">Total Scouts</div><div class="stat-value">${S.families.length}</div><div class="stat-hint">Registered this year</div></div>
     <div class="stat-card green"><div class="stat-label">Total Funds Available</div><div class="stat-value green">${fmt(totalFunds)}</div><div class="stat-hint">Across all accounts</div></div>
-    <div class="stat-card red"><div class="stat-label">Scouts with Balance Due</div><div class="stat-value red">${unpaidCount}</div><div class="stat-hint">${fmt(totalOwed)} total owed</div></div>
+    <div class="stat-card red"><div class="stat-label">Scouts Needing Attention</div><div class="stat-value ${unpaidCount>0?'red':'green'}">${unpaidCount}</div><div class="stat-hint">${unpaidHint}</div></div>
     <div class="stat-card gold"><div class="stat-label">Net Scout Funds</div><div class="stat-value gold">${fmt(totalBalances)}</div><div class="stat-hint">Credits minus charges</div></div>
   `;
   const filtered=S.families.filter(f=>(denFilterMode==='all'||f.den===denFilterMode)&&(!search||f.scout.toLowerCase().includes(search)||(f.parent||'').toLowerCase().includes(search)));
