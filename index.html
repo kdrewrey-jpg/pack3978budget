@@ -1196,6 +1196,8 @@ function saveDuesSettings(){
 function duesAreDue(){
   const d=S.duesSettings;
   if(!d||!d.dueDate)return false;
+  // Only fire alerts if dues settings are for the current calendar year
+  if(d.year&&d.year!==new Date().getFullYear())return false;
   return today()>=d.dueDate;
 }
 function scoutHasPaidDues(f){
@@ -1357,7 +1359,7 @@ function openFamilyDetail(id){
       <div><span style="color:var(--text-muted)">Parent:</span> <strong>${f.parent||'—'}</strong></div>
       <div><span style="color:var(--text-muted)">Email:</span> <strong>${f.email||'—'}</strong>${f.email?`<button class="copy-email-btn" onclick="copyToClipboard('${f.email}','Email')">📋 Copy</button>`:''}</div>
       <div><span style="color:var(--text-muted)">Phone:</span> <strong>${f.phone||'—'}</strong>${f.phone?`<button class="copy-email-btn" onclick="copyToClipboard('${f.phone}','Phone')">📋 Copy</button>`:''}</div>
-      <div><span style="color:var(--text-muted)">Annual Dues:</span> <strong>${fmt(f.annualDues||0)}</strong></div>
+      <div><span style="color:var(--text-muted)">Annual Dues:</span> <strong>${fmt(f.annualDues||0)}</strong>${duesAreDue()&&!scoutHasPaidDues(f)?` <span style="display:inline-flex;align-items:center;gap:4px;background:var(--red-light);border:1px solid #F5C6C6;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--red);margin-left:6px">⚠ ${S.duesSettings.year} Unpaid</span>`:''}</div>
     </div>
     ${f.notes?`<div class="alert alert-info" style="margin-bottom:14px">📝 ${f.notes}</div>`:''}
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
@@ -1580,8 +1582,9 @@ function renderReports(){
   const wds=S.transactions.filter(t=>t.type==='withdrawal').reduce((s,t)=>s+t.amt,0);
   const bal=deps-wds;
   const totalFunds=S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0);
-  const unpaid=S.families.filter(f=>getScoutBalance(f)<0);
-  const totalOwed=unpaid.reduce((s,f)=>s+Math.abs(getScoutBalance(f)),0);
+  const unpaid=S.families.filter(f=>getScoutBalance(f)<0||(duesAreDue()&&!scoutHasPaidDues(f)));
+  const totalOwed=unpaid.reduce((s,f)=>s+Math.abs(Math.min(0,getScoutBalance(f))),0);
+  const unpaidLabel=duesAreDue()?'Scouts Needing Attention':'Scouts with Balance Due';
   // Summary card
   document.getElementById('report-summary-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
@@ -1589,7 +1592,7 @@ function renderReports(){
       ${pdfSummaryRow('Total Scouts',S.families.length)}
       ${pdfSummaryRow('Checking Balance',fmt(bal),bal>=0?'#1A6B38':'#BE0000')}
       ${pdfSummaryRow('Total Scout Funds',fmt(totalFunds),'#1A6B38')}
-      ${pdfSummaryRow('Scouts with Balance Due',unpaid.length,unpaid.length>0?'#BE0000':'#1A6B38')}
+      ${pdfSummaryRow(unpaidLabel,unpaid.length,unpaid.length>0?'#BE0000':'#1A6B38')}
       ${pdfSummaryRow('Total Amount Owed',fmt(totalOwed),totalOwed>0?'#BE0000':'#1A6B38')}
       ${pdfSummaryRow('Total Events',S.events.length)}
       ${pdfSummaryRow('Last Saved',lastSaved?lastSaved.toLocaleString():'Not yet saved')}
@@ -1646,7 +1649,7 @@ function generateReport(type,year){
       `<div style="margin-top:14px;display:flex;gap:24px;font-size:13px">
         <span style="color:#5C6472">Total Scouts: <strong>${S.families.length}</strong></span>
         <span style="color:#1A6B38">Total Funds: <strong>${fmt(S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0))}</strong></span>
-        <span style="color:#BE0000">Scouts with Balance Due: <strong>${S.families.filter(f=>getScoutBalance(f)<0).length}</strong></span>
+        <span style="color:#BE0000">Scouts Needing Attention: <strong>${S.families.filter(f=>getScoutBalance(f)<0||(duesAreDue()&&!scoutHasPaidDues(f))).length}</strong></span>
       </div>`+pdfFooter(S.packName);
   }
   else if(type==='checking'){
@@ -1688,16 +1691,31 @@ function generateReport(type,year){
       pdfFooter(S.packName);
   }
   else if(type==='dues'){
-    const withDue=S.families.filter(f=>getScoutBalance(f)<0).sort((a,b)=>getScoutBalance(a)-getScoutBalance(b));
-    const goodStanding=S.families.filter(f=>getScoutBalance(f)>=0);
-    const totalOwed=withDue.reduce((s,f)=>s+Math.abs(getScoutBalance(f)),0);
+    const withDue=S.families.filter(f=>getScoutBalance(f)<0||(duesAreDue()&&!scoutHasPaidDues(f))).sort((a,b)=>getScoutBalance(a)-getScoutBalance(b));
+    const goodStanding=S.families.filter(f=>getScoutBalance(f)>=0&&(!duesAreDue()||scoutHasPaidDues(f)));
+    const totalOwed=withDue.reduce((s,f)=>s+Math.abs(Math.min(0,getScoutBalance(f))),0);
+    const unpaidDuesCount=duesAreDue()?S.families.filter(f=>!scoutHasPaidDues(f)).length:0;
     area.innerHTML=pdfHeader(S.packName,'Dues & Balances Report')+
-      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
-        <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#BE0000">Scouts with Balance Due</div><div style="font-size:24px;font-weight:700;color:#BE0000">${withDue.length}</div></div>
-        <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#BE0000">Total Amount Owed</div><div style="font-size:24px;font-weight:700;color:#BE0000">${fmt(totalOwed)}</div></div>
-        <div style="background:#E9F5EE;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#1A6B38">Scouts in Good Standing</div><div style="font-size:24px;font-weight:700;color:#1A6B38">${goodStanding.length}</div></div>
+      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr ${duesAreDue()?'1fr':''};gap:12px;margin-bottom:20px">
+        <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7A0000;font-weight:700">Scouts Needing Attention</div><div style="font-size:24px;font-weight:700;color:#7A0000">${withDue.length}</div></div>
+        <div style="background:#F9EBEB;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7A0000;font-weight:700">Total Amount Owed</div><div style="font-size:24px;font-weight:700;color:#7A0000">${fmt(totalOwed)}</div></div>
+        ${duesAreDue()?`<div style="background:#FFF8E8;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7A5C00;font-weight:700">Unpaid ${S.duesSettings?.year||''} Dues</div><div style="font-size:24px;font-weight:700;color:#7A5C00">${unpaidDuesCount}</div></div>`:''}
+        <div style="background:#E9F5EE;border-radius:8px;padding:12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#0A4020;font-weight:700">In Good Standing</div><div style="font-size:24px;font-weight:700;color:#0A4020">${goodStanding.length}</div></div>
       </div>`+
-      (withDue.length?`<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#BE0000;margin-bottom:8px">Outstanding Balances</div>`+pdfTable(['Scout','Den','Parent','Fund Balance','Annual Dues'],withDue.map(f=>[f.scout,f.den,f.parent||'—',`<span style="color:#BE0000;font-weight:700">${fmt(getScoutBalance(f))}</span>`,fmt(f.annualDues||0)])):'<div style="text-align:center;padding:24px;color:#1A6B38;font-weight:700">✓ All scouts are in good standing!</div>')+
+      (withDue.length?
+        `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#7A0000;margin-bottom:8px">Scouts Needing Attention</div>`+
+        pdfTable(
+          ['Scout','Den','Parent','Fund Balance','Annual Dues','Dues Recorded'],
+          withDue.map(f=>[
+            f.scout,
+            f.den,
+            f.parent||'—',
+            `<span style="color:${getScoutBalance(f)<0?'#7A0000':'#0A4020'};font-weight:700">${fmt(getScoutBalance(f))}</span>`,
+            fmt(f.annualDues||S.duesSettings?.amount||50),
+            duesAreDue()?(scoutHasPaidDues(f)?'<span style="color:#0A4020;font-weight:700">✓ Yes</span>':'<span style="color:#7A0000;font-weight:700">✗ No</span>'):'N/A'
+          ])
+        )
+      :'<div style="text-align:center;padding:24px;color:#0A4020;font-weight:700">✓ All scouts are in good standing!</div>')+
       pdfFooter(S.packName);
   }
   else if(type==='full'){
