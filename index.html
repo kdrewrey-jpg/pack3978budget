@@ -1146,7 +1146,7 @@ function renderDuesBanner(){
         <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Year</span><div style="font-size:18px;font-weight:700;color:var(--navy)">${d.year}</div></div>
         <div><span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted)">Unpaid Scouts</span><div style="font-size:18px;font-weight:700;color:${unpaidCount>0&&isDue?'var(--red)':'var(--green)'}">${unpaidCount}</div></div>
       </div>
-      <span class="badge ${isDue?'badge-red':'badge-navy'}">${isDue?'⚠ Dues Are Due':'⏳ Not Due Yet — Due '+d.dueDate}</span>
+      <span class="badge ${isDue&&unpaidCount>0?'badge-red':!isDue?'badge-navy':'badge-green'}">${isDue&&unpaidCount>0?'⚠ Dues Are Due':isDue&&unpaidCount===0?'✓ All Dues Paid':'⏳ Not Due Yet — Due '+d.dueDate}</span>
     </div>
   `;
 }
