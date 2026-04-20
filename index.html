@@ -126,6 +126,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px;}
 /* STAT CARDS */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
 .stat-card{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;}
 .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
 .stat-card.blue::before{background:var(--navy);}
@@ -414,6 +415,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
 
   /* STAT GRID — 2x2 */
   .stat-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-grid-5{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
   .stat-value{font-size:22px;}
 
   /* PAGE HEADER */
@@ -617,7 +619,7 @@ tbody tr.row-withdrawal:hover td{background:rgba(190,0,0,.07);}
           <button class="btn btn-ghost btn-sm" onclick="showPage('checking',document.querySelectorAll('.nav-item')[3])">+ Transaction</button>
         </div>
       </div>
-      <div class="stat-grid" id="dash-stats"></div>
+      <div class="stat-grid-5" id="dash-stats"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
         <div class="card" style="margin:0"><div class="card-header"><span class="card-title">⚠ Scouts with Balance Due</span></div><div class="card-body" style="padding:0 22px"><div id="dash-unpaid"></div></div></div>
         <div class="card" style="margin:0"><div class="card-header"><span class="card-title">📅 Upcoming Events (30 days)</span></div><div class="card-body" style="padding:0 22px"><div id="dash-events"></div></div></div>
@@ -1139,15 +1141,17 @@ function renderDashboard(){
   const deps=S.transactions.filter(t=>t.type==='deposit').reduce((s,t)=>s+t.amt,0);
   const wds=S.transactions.filter(t=>t.type==='withdrawal').reduce((s,t)=>s+t.amt,0);const bal=deps-wds;
   const totalFunds=S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0);
+  const unallocated=bal-totalFunds;
   const negativeBalCount=S.families.filter(f=>getScoutBalance(f)<0).length;
   const unpaidDuesCount=duesAreDue()?S.families.filter(f=>!scoutHasPaidDues(f)).length:0;
   const unpaidCount=Math.max(negativeBalCount,unpaidDuesCount);
   const unpaidHint=duesAreDue()&&unpaidDuesCount>0?`${unpaidDuesCount} unpaid dues`:`${negativeBalCount} negative balance${negativeBalCount!==1?'s':''}`;
   document.getElementById('dash-stats').innerHTML=`
-    <div class="stat-card blue"><div class="stat-label">Checking Balance</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div><div class="stat-hint">Pack checking account</div></div>
-    <div class="stat-card green"><div class="stat-label">Total Scout Funds</div><div class="stat-value green">${fmt(totalFunds)}</div><div class="stat-hint">Positive balances</div></div>
+    <div class="stat-card blue"><div class="stat-label">Checking Balance</div><div class="stat-value ${bal>=0?'green':'red'}">${fmt(bal)}</div><div class="stat-hint">Total in bank account</div></div>
+    <div class="stat-card green"><div class="stat-label">Total Scout Funds</div><div class="stat-value green">${fmt(totalFunds)}</div><div class="stat-hint">Allocated to scouts</div></div>
+    <div class="stat-card gold"><div class="stat-label">Unallocated Pack Funds</div><div class="stat-value ${unallocated>=0?'gold':'red'}">${fmt(unallocated)}</div><div class="stat-hint">Checking minus scout funds</div></div>
     <div class="stat-card red"><div class="stat-label">Scouts Needing Attention</div><div class="stat-value ${unpaidCount>0?'red':'green'}">${unpaidCount}</div><div class="stat-hint">${unpaidHint}</div></div>
-    <div class="stat-card gold"><div class="stat-label">Upcoming Events</div><div class="stat-value gold">${getUpcomingEvents(30).length}</div><div class="stat-hint">Next 30 days</div></div>
+    <div class="stat-card blue"><div class="stat-label">Upcoming Events</div><div class="stat-value gold">${getUpcomingEvents(30).length}</div><div class="stat-hint">Next 30 days</div></div>
   `;
   const unpaid=S.families.filter(f=>getScoutBalance(f)<0||duesAreDue()&&!scoutHasPaidDues(f));
   document.getElementById('dash-unpaid').innerHTML=!unpaid.length
@@ -1705,11 +1709,12 @@ function generateReport(type,year){
     area.innerHTML=pdfHeader(S.packName,`Full Financial Report — ${year}`)+
       // Financial snapshot
       `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Financial Snapshot</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
-        <div style="background:#E8EEF7;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Checking Balance</div><div style="font-size:16px;font-weight:700;color:${allDeps-allWds>=0?'#1A6B38':'#BE0000'}">${fmt(allDeps-allWds)}</div></div>
-        <div style="background:#E9F5EE;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Total Scout Funds</div><div style="font-size:16px;font-weight:700;color:#1A6B38">${fmt(S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0))}</div></div>
-        <div style="background:#F9EBEB;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Scouts w/ Balance Due</div><div style="font-size:16px;font-weight:700;color:#BE0000">${S.families.filter(f=>getScoutBalance(f)<0).length}</div></div>
-        <div style="background:#F0EDE4;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5C6472">Budget Net (${year})</div><div style="font-size:16px;font-weight:700;color:${ai-ae>=0?'#1A6B38':'#BE0000'}">${fmt(ai-ae)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px">
+        <div style="background:#E8EEF7;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#444;font-weight:700">Checking Balance</div><div style="font-size:16px;font-weight:700;color:${allDeps-allWds>=0?'#0A4020':'#7A0000'}">${fmt(allDeps-allWds)}</div></div>
+        <div style="background:#E9F5EE;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#444;font-weight:700">Total Scout Funds</div><div style="font-size:16px;font-weight:700;color:#0A4020">${fmt(S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0))}</div></div>
+        <div style="background:#FFF8E8;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#444;font-weight:700">Unallocated Funds</div><div style="font-size:16px;font-weight:700;color:${(allDeps-allWds)-S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0)>=0?'#7A5C00':'#7A0000'}">${fmt((allDeps-allWds)-S.families.reduce((s,f)=>s+Math.max(0,getScoutBalance(f)),0))}</div></div>
+        <div style="background:#F9EBEB;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#444;font-weight:700">Scouts Needing Attention</div><div style="font-size:16px;font-weight:700;color:#7A0000">${S.families.filter(f=>getScoutBalance(f)<0||(duesAreDue()&&!scoutHasPaidDues(f))).length}</div></div>
+        <div style="background:#F0EDE4;border-radius:8px;padding:10px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#444;font-weight:700">Budget Net (${year})</div><div style="font-size:16px;font-weight:700;color:${ai-ae>=0?'#0A4020':'#7A0000'}">${fmt(ai-ae)}</div></div>
       </div>`+
       // Scout accounts
       `<div style="font-family:'Fjalla One',sans-serif;font-size:14px;color:#1A5276;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Scout Fund Accounts</div>`+
